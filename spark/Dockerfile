@@ -29,7 +29,7 @@ ARG SCALA_VERSION=2.12
 
 RUN set -ex; \
     apt-get update; \
-    apt install  -y --no-install-recommends maven
+    apt install  -y --no-install-recommends maven dos2unix
 
 WORKDIR /workspace
 
@@ -38,11 +38,13 @@ COPY okdp-addons.pom deps/pom.xml
 # The setup consumes less space compare to inheriting from the parent pom
 # Handles the transitive dependencies versions through the pom
 # Manage Java AWS SDK v1 (hadoop <3.4)/V2 (hadoop >=3.4)
-RUN mvn dependency:get -DgroupId=org.apache.spark -DartifactId=spark-parent_${SCALA_VERSION} -Dversion=${SPARK_VERSION} -Dpackaging=pom; \
-    mvn dependency:copy -Dartifact=org.apache.spark:spark-parent_${SCALA_VERSION}:${SPARK_VERSION}:pom -Dproject.basedir=./ -DoutputDirectory=./; \
-    HADOOP_VERSION=$(grep "<hadoop.version>" spark-parent_${SCALA_VERSION}-${SPARK_VERSION}.pom | sed -e 's/^ *<hadoop.version>\(.*\)<\/hadoop.version> *$/\1/'|head -1); \
+# Some pom.xml versions comes with Control M
+RUN mvn -ntp dependency:get -DgroupId=org.apache.spark -DartifactId=spark-parent_${SCALA_VERSION} -Dversion=${SPARK_VERSION} -Dpackaging=pom; \
+    mvn -ntp dependency:copy -Dartifact=org.apache.spark:spark-parent_${SCALA_VERSION}:${SPARK_VERSION}:pom -Dproject.basedir=./ -DoutputDirectory=./; \
+    dos2unix spark-parent_${SCALA_VERSION}-${SPARK_VERSION}.pom; \
+    HADOOP_VERSION=$(grep "<hadoop.version>" spark-parent_${SCALA_VERSION}-${SPARK_VERSION}.pom | tr -d ' ' | sed -e 's/^ *<hadoop.version>\(.*\)<\/hadoop.version> *$/\1/' | sort -rn | head -n 1); \
     mv ./deps/pom.xml .; \
-    mvn clean dependency:copy-dependencies \
+    mvn -ntp clean dependency:copy-dependencies \
         -Dspark.version=${SPARK_VERSION} \
         -Dscala.version=${SCALA_VERSION} \
         -Dhadoop.version=${HADOOP_VERSION} \
