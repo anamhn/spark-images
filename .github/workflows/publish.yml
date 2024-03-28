@@ -14,30 +14,30 @@
 # limitations under the License.
 #
 
-name: ci 
+name: publish 
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/**"
-      - ".github/actions/**"
+  # pull_request:
+  #   paths:
+  #     - ".github/workflows/**"
+  #     - ".github/actions/**"
 
-      - "spark/**"
-      - "spark-*/**"
+  #     - "spark/**"
+  #     - "spark-*/**"
   
-      - "!README.md"
+  #     - "!README.md"
 
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/**"
-      - ".github/actions/**"
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - ".github/workflows/**"
+  #     - ".github/actions/**"
   
-      - "spark/**"
-      - "spark-*/**"
+  #     - "spark/**"
+  #     - "spark-*/**"
   
-      - "!README.md"
+  #     - "!README.md"
 
   workflow_dispatch:
 
@@ -51,15 +51,16 @@ permissions:
   packages: write
   
 jobs:
-    
-  spark-ci:
-    name: spark-ci (spark-${{ matrix.spark_version }})
+  
+  spark-publish:
+    if: github.repository_owner == 'OKDP'
+    name: spark-publish (spark-${{ matrix.spark_version }})
     strategy:
       matrix: 
         python_version: [3.11]
-        spark_version: [3.3.4, 3.4.2]
+        spark_version: [3.3.3, 3.3.4]
         java_version: [17]
-        scala_version: [2.12, 2.13]
+        scala_version: [2.12]
         hadoop_version: [3]
     uses: ./.github/workflows/build-images-template.yml
     with:
@@ -68,4 +69,8 @@ jobs:
       java_version: ${{ matrix.java_version }}
       scala_version: ${{ matrix.scala_version }}
       hadoop_version: ${{ matrix.hadoop_version }}
-      publish_to_registry: "false"
+      registry: ${{ vars.REGISTRY || 'quay.io' }}
+      publish_to_registry: "true"
+    secrets: inherit
+
+      

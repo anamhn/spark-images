@@ -39,6 +39,15 @@ on:
         description: Python version
         required: true
         type: string
+      registry:
+        description: The container registry 
+        required: false
+        type: string
+      publish_to_registry:
+        description: Wheter to push to the registry
+        required: false
+        type: string
+        default: "false"
       runs-on:
         description: GitHub Actions Runner image
         required: false
@@ -56,6 +65,8 @@ jobs:
       java_version: ${{ inputs.java_version }}
       scala_version: ${{ inputs.scala_version }}
       hadoop_version: ${{ inputs.hadoop_version }}
+      registry: ${{ inputs.registry }}
+      publish_to_registry: ${{ inputs.publish_to_registry }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit
 
@@ -69,6 +80,8 @@ jobs:
       java_version: ${{ inputs.java_version }}
       scala_version: ${{ inputs.scala_version }}
       hadoop_version: ${{ inputs.hadoop_version }}
+      registry: ${{ inputs.registry }}
+      publish_to_registry: ${{ inputs.publish_to_registry }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit
 
@@ -82,6 +95,8 @@ jobs:
       java_version: ${{ inputs.java_version }}
       scala_version: ${{ inputs.scala_version }}
       hadoop_version: ${{ inputs.hadoop_version }}
+      registry: ${{ inputs.registry }}
+      publish_to_registry: ${{ inputs.publish_to_registry }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit
 
@@ -95,5 +110,7 @@ jobs:
       java_version: ${{ inputs.java_version }}
       scala_version: ${{ inputs.scala_version }}
       hadoop_version: ${{ inputs.hadoop_version }}
+      registry: ${{ inputs.registry }}
+      publish_to_registry: ${{ inputs.publish_to_registry }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit

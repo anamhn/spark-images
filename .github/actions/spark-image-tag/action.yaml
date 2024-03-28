@@ -36,6 +36,12 @@ inputs:
   ci_repo:
     description: The CI registry repo
     required: false
+  publish_repo:
+    description: The official registry repo
+    required: false
+  publish_to_registry:
+    description: Whether to push or not to the official registry repo
+    required: true
 
 outputs:
   parent_image:
@@ -44,6 +50,9 @@ outputs:
   latest_tag:
     description: "CI image tags (ex.: spark-3.3.4....)"
     value: ${{ steps.tags.outputs.latest_tag }}
+  publish_tags:
+    description: "Image tags to push into registry (ex.: quay.io/spark-r:spark-3.3.4...)"
+    value: ${{ steps.tags.outputs.publish_tags }}
 
 runs:
   using: composite
@@ -83,17 +92,27 @@ runs:
         LATEST_TAG=$(yq -oc '(.images[] | select(.name == "${{ inputs.image }}").tags[0])' .build/images.yml)
         LATEST_TAG=$(eval echo ${LATEST_TAG})
 
+        PUBLISH_TAGS=$(yq -oc  '[.images[] | select(.name == "${{ inputs.image }}").tags | .[] |"${{ inputs.publish_repo }}/${{ inputs.image }}:" + .]' .build/images.yml)
+        PUBLISH_TAGS=$(eval echo ${PUBLISH_TAGS})
+
         # The image can inherit from a community image like docker.io/eclipse-temurin, ...
         if [[ "${PARENT_IMAGE_NAME}" != *"/"* ]]
         then
-            PARENT_IMAGE_NAME="${{ inputs.ci_repo }}/${PARENT_IMAGE_NAME}"
+           if [[ "${{ inputs.publish_to_registry }}" == "true" ]]
+           then
+              PARENT_IMAGE_NAME="${{ inputs.publish_repo }}/${PARENT_IMAGE_NAME}"
+           else
+              PARENT_IMAGE_NAME="${{ inputs.ci_repo }}/${PARENT_IMAGE_NAME}"
+           fi
         fi
 
         # Logging
         echo "parent_image=${PARENT_IMAGE_NAME}"
         echo "latest_tag=${LATEST_TAG}"
+        echo "publish_tags=${PUBLISH_TAGS}"
         # Set outputs
         echo "parent_image=${PARENT_IMAGE_NAME}" >> $GITHUB_OUTPUT
         echo "latest_tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
+        echo "publish_tags=${PUBLISH_TAGS}" >> $GITHUB_OUTPUT
         
       shell: bash
