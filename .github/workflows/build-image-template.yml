@@ -1,0 +1,124 @@
+
+#
+# Copyright 2024 tosit.io
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Spark build single image template
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: The spark image name (ex. spark-base, spark, spark-py, spark-r, etc)
+        required: true
+        type: string
+      spark_version:
+        description: Spark version
+        required: true
+        type: string
+      scala_version:
+        description: Scala version
+        required: true
+        type: string
+      java_version:
+        description: Java version
+        required: true
+        type: string
+      hadoop_version:
+        description: Hadoop version
+        required: true
+        type: string
+      python_version:
+        description: Python version
+        required: true
+        type: string
+      ci_registry:
+        description: "The registry used to push ci images"
+        required: false
+        type: string
+        default: "ghcr.io"
+      git_latest_release_tag:
+        description: The latest remote release tag 
+        required: false
+        type: string
+        default: ""
+      runs-on:
+        description: GitHub Actions Runner image
+        required: true
+        type: string
+
+jobs:
+  
+  build-test-push:
+    name: ${{ inputs.image }} (scala-${{ inputs.scala_version }}, java-${{ inputs.java_version }}, python-${{ inputs.python_version }})
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      ### The CI is based on the main branch
+      - name: Checkout Repo ⚡️
+        uses: actions/checkout@v4
+
+      ### Common steps between CI and Publish
+      - name: Free up disk space 📦
+        uses: ./.github/actions/free-disk-space
+
+      - name: Set up QEMU and Docker Buildx 📦
+        uses: ./.github/actions/setup-buildx
+
+      - name: Set up CI and Publish registries 📦
+        id: registry-repos
+        run:  |
+            echo "repo_owner=${GITHUB_REPOSITORY_OWNER@L}" >> $GITHUB_OUTPUT
+            echo "ci_repo=${{ inputs.ci_registry }}/${GITHUB_REPOSITORY_OWNER@L}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Generate image tags 📦
+        id: image-tags
+        uses: ./.github/actions/spark-image-tag
+        with:
+          image: ${{ inputs.image }}
+          spark_version: ${{ inputs.spark_version}}
+          scala_version: ${{ inputs.scala_version }}
+          java_version: ${{ inputs.java_version }}
+          python_version: ${{ inputs.python_version}}
+          ci_repo: ${{ steps.registry-repos.outputs.ci_repo }}
+
+      - name: Login to the CI registry 🔐
+        if: (!startsWith(inputs.spark_version, '2.'))
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.ci_registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push to ci registry
+        if: (!startsWith(inputs.spark_version, '2.'))
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.image }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            SPARK_VERSION=${{ inputs.spark_version}}
+            SCALA_VERSION=${{ inputs.scala_version }}
+            JAVA_VERSION=${{ inputs.java_version }}
+            PYTHON_VERSION=${{ inputs.python_version }}
+            HADOOP_VERSION=${{ inputs.hadoop_version }}
+            BASE_IMAGE=${{ steps.image-tags.outputs.parent_image }}
+          tags: |
+            ${{ steps.registry-repos.outputs.ci_repo }}/${{ inputs.image }}:${{ steps.image-tags.outputs.latest_tag }}
+
+
+
+
