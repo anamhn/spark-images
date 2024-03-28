@@ -36,6 +36,9 @@ inputs:
   ci_repo:
     description: The CI registry repo
     required: false
+  git_tag_name:
+    description: The Git remote latest tag name
+    required: false
   publish_repo:
     description: The official registry repo
     required: false
@@ -75,6 +78,8 @@ runs:
         scala_version=${{ inputs.scala_version }}
         java_version=${{ inputs.java_version }}
         python_version=${{ inputs.python_version }}
+        git_tag_name=${{ inputs.git_tag_name }}
+        git_release_version=$(echo '${{ inputs.git_tag_name }}' | tr -d 'v')
 
         git_commit_sha=${{ env.GIT_COMMIT_SHA }}
         git_commit_short_sha=${{ env.GIT_COMMIT_SHORT_SHA }}

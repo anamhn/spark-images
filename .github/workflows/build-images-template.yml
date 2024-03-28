@@ -48,6 +48,11 @@ on:
         required: false
         type: string
         default: "false"
+      git_latest_release_tag:
+        description: The latest remote release tag 
+        required: false
+        type: string
+        default: ""
       runs-on:
         description: GitHub Actions Runner image
         required: false
@@ -67,6 +72,7 @@ jobs:
       hadoop_version: ${{ inputs.hadoop_version }}
       registry: ${{ inputs.registry }}
       publish_to_registry: ${{ inputs.publish_to_registry }}
+      git_latest_release_tag: ${{ inputs.git_latest_release_tag }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit
 
@@ -82,6 +88,7 @@ jobs:
       hadoop_version: ${{ inputs.hadoop_version }}
       registry: ${{ inputs.registry }}
       publish_to_registry: ${{ inputs.publish_to_registry }}
+      git_latest_release_tag: ${{ inputs.git_latest_release_tag }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit
 
@@ -97,6 +104,7 @@ jobs:
       hadoop_version: ${{ inputs.hadoop_version }}
       registry: ${{ inputs.registry }}
       publish_to_registry: ${{ inputs.publish_to_registry }}
+      git_latest_release_tag: ${{ inputs.git_latest_release_tag }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit
 
@@ -112,5 +120,6 @@ jobs:
       hadoop_version: ${{ inputs.hadoop_version }}
       registry: ${{ inputs.registry }}
       publish_to_registry: ${{ inputs.publish_to_registry }}
+      git_latest_release_tag: ${{ inputs.git_latest_release_tag }}
       runs-on: ${{ inputs.runs-on }}
     secrets: inherit

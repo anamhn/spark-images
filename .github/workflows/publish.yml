@@ -52,9 +52,37 @@ permissions:
   
 jobs:
   
-  spark-publish:
+  latest-github-release:
     if: github.repository_owner == 'OKDP'
+    runs-on: "ubuntu-latest"
+    outputs:
+      tag_name: ${{ steps.git-release-tag.outputs.tag_name }}
+    steps:
+      - name: Checkout Repo ⚡️
+        uses: actions/checkout@v4
+
+      - name: Get latest GitHub Release tag name 📥
+        id: git-release-tag
+        uses: InsonusK/get-latest-release@v1.0.1
+        with:
+          myToken: ${{ github.token }}
+          exclude_types: "draft"
+          view_top: 1
+      
+      - name: Info - Found latest release tag
+        run: |
+            echo "id: ${{ steps.git-release-tag.outputs.id }}"
+            echo "name: ${{ steps.git-release-tag.outputs.name }}"
+            echo "tag_name: ${{ steps.git-release-tag.outputs.tag_name }}"
+            echo "created_at: ${{ steps.git-release-tag.outputs.created_at }}"
+            echo "draft: ${{ steps.git-release-tag.outputs.draft }}"
+            echo "prerelease: ${{ steps.git-release-tag.outputs.prerelease }}"
+        shell: bash
+
+  spark-publish:
+    if: github.repository_owner == 'OKDP' && needs.latest-github-release.outputs.tag_name != ''
     name: spark-publish (spark-${{ matrix.spark_version }})
+    needs: [latest-github-release]
     strategy:
       matrix: 
         python_version: [3.11]
@@ -71,6 +99,7 @@ jobs:
       hadoop_version: ${{ matrix.hadoop_version }}
       registry: ${{ vars.REGISTRY || 'quay.io' }}
       publish_to_registry: "true"
+      git_latest_release_tag: ${{ needs.latest-github-release.outputs.tag_name }}
     secrets: inherit
 
       

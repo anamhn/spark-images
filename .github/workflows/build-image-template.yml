@@ -58,6 +58,11 @@ on:
         required: false
         type: string
         default: "ghcr.io"
+      git_latest_release_tag:
+        description: The latest remote release tag 
+        required: false
+        type: string
+        default: ""
       runs-on:
         description: GitHub Actions Runner image
         required: true
@@ -70,8 +75,16 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     steps:
 
+      ### The publish and periodic rebuilds are based on the latest stable github release tag
+      - name: Checkout latest Github Release tag (${{ inputs.git_latest_release_tag }}) ⚡️
+        if: inputs.publish_to_registry == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.git_latest_release_tag }}
+      
       ### The CI is based on the main branch
       - name: Checkout Repo ⚡️
+        if: inputs.publish_to_registry == 'false'
         uses: actions/checkout@v4
 
       ### Common steps between CI and Publish
@@ -101,6 +114,7 @@ jobs:
           ci_repo: ${{ steps.registry-repos.outputs.ci_repo }}
           publish_repo: ${{ steps.registry-repos.outputs.publish_repo }}
           publish_to_registry: ${{ inputs.publish_to_registry }}
+          git_tag_name: ${{ inputs.git_latest_release_tag }}
 
       - name: Login to the CI registry 🔐
         if: inputs.publish_to_registry == 'false'
@@ -164,6 +178,7 @@ jobs:
           git_checkout_tag_dir: ${{ steps.git-checkout-tag.outputs.checkout_directory }}
 
       ### Publish steps
+      ### The publish and periodic rebuilds are based on the latest stable github release tag
       - name: Login into official registry 🔐
         if: inputs.publish_to_registry == 'true'
         uses: docker/login-action@v3
