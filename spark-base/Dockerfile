@@ -32,6 +32,9 @@ ENV SPARK_VERSION    ${SPARK_VERSION}
 ENV HADOOP_VERSION   ${HADOOP_VERSION}
 ENV SCALA_VERSION    ${SCALA_VERSION}
 
+## Add missing gpg keys from https://downloads.apache.org/spark/KEYS
+COPY MISSING-GPG-KEYS.yml .
+
 RUN groupadd --system --gid=${spark_uid} spark && \
     useradd --system --uid=${spark_uid} --gid=spark spark
 
@@ -58,8 +61,11 @@ RUN set -ex;\
     curl --retry 3 --retry-all-errors -k ${SPARK_DIST_DOWNLOAD_URL}/${DIST}.tgz -o ${WORK_DIR}/spark.tgz; \
     curl --retry 3 --retry-all-errors -k ${SPARK_DIST_DOWNLOAD_URL}/${DIST}.tgz.asc -o ${WORK_DIR}/spark.tgz.asc; \
     curl --retry 3 --retry-all-errors -k https://downloads.apache.org/spark/KEYS -o ${WORK_DIR}/KEYS; \
+    MISSING_KEYS=($(cat MISSING-GPG-KEYS.yml | grep "keys:" -A300 | awk -F: '{ print $2 }' | tr -d '\n' | tr -d \"\" )); \
     export GNUPGHOME="$(mktemp -d)"; \
     gpg --batch --import ${WORK_DIR}/KEYS; \
+    gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys ${MISSING_KEYS} || true; \
+    gpg --batch --keyserver hkps://keyserver.ubuntu.com --recv-keys ${MISSING_KEYS} || true; \
     gpg --batch --verify ${WORK_DIR}/spark.tgz.asc ${WORK_DIR}/spark.tgz; \
     tar --strip-components=1 -zxvf ${WORK_DIR}/spark.tgz -C ${SPARK_HOME}/; \
     chown -R spark:spark ${SPARK_HOME}/; \
@@ -67,7 +73,7 @@ RUN set -ex;\
     mv ${SPARK_HOME}/kubernetes/tests ${SPARK_HOME}/; \
     chmod a+x /opt/decom.sh; \
     gpgconf --kill all; \
-    rm -rf ${GNUPGHOME} ${WORK_DIR}; \
+    rm -rf ${GNUPGHOME} ${WORK_DIR} MISSING-GPG-KEYS.yml; \
     rm -fr ${SPARK_HOME}/conf rm -fr ${SPARK_HOME}/yarn rm -fr ${SPARK_HOME}/kubernetes
 
 COPY entrypoint.sh /opt/entrypoint.sh
