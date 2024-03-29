@@ -71,7 +71,7 @@ on:
 jobs:
   
   build-test-push:
-    name: ${{ inputs.image }} (scala-${{ inputs.scala_version }}, java-${{ inputs.java_version }}, python-${{ inputs.python_version }})
+    name: ${{ inputs.image }} (scala-${{ inputs.scala_version }}, java-${{ inputs.java_version }}, python-${{ inputs.python_version }}, hadoop-${{ inputs.hadoop_version }})
     runs-on: ${{ inputs.runs-on }}
     steps:
 

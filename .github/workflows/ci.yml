@@ -21,6 +21,7 @@ on:
     paths:
       - ".github/workflows/**"
       - ".github/actions/**"
+      - ".build/**"
 
       - "spark/**"
       - "spark-*/**"
@@ -33,6 +34,7 @@ on:
     paths:
       - ".github/workflows/**"
       - ".github/actions/**"
+      - ".build/**"
   
       - "spark/**"
       - "spark-*/**"
@@ -51,21 +53,33 @@ permissions:
   packages: write
   
 jobs:
-    
+
+  get-ci-versions:
+    runs-on: "ubuntu-latest"
+    outputs:
+      matrix: ${{ steps.ci-versions.outputs.matrix }}
+    steps:
+      - name: Checkout Repo ⚡️
+        uses: actions/checkout@v4
+
+      - name: Get CI versions matrix 📥
+        id: ci-versions
+        uses: ./.github/actions/spark-version-matrix
+        with:
+          use_matrix: ".build/ci-versions.yml"
+
   spark-ci:
-    name: spark-ci (spark-${{ matrix.spark_version }})
+    name: spark-ci (spark-${{ matrix.version.spark_version }})
+    needs: [get-ci-versions]
     strategy:
+      fail-fast: false
       matrix: 
-        python_version: [3.11]
-        spark_version: [3.3.4, 3.4.2]
-        java_version: [17]
-        scala_version: [2.12, 2.13]
-        hadoop_version: [3]
+        version: ${{ fromJson(needs.get-ci-versions.outputs.matrix) }}
     uses: ./.github/workflows/build-images-template.yml
     with:
-      python_version: ${{ matrix.python_version }}
-      spark_version: ${{ matrix.spark_version }}
-      java_version: ${{ matrix.java_version }}
-      scala_version: ${{ matrix.scala_version }}
-      hadoop_version: ${{ matrix.hadoop_version }}
+      python_version: ${{ matrix.version.python_version }}
+      spark_version: ${{ matrix.version.spark_version }}
+      java_version: ${{ matrix.version.java_version }}
+      scala_version: ${{ matrix.version.scala_version }}
+      hadoop_version: ${{ matrix.version.hadoop_version }}
       publish_to_registry: "false"

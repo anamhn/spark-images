@@ -1,0 +1,50 @@
+#
+# Copyright 2024 tosit.io
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+########### ~~~ CI TEST MATRIX VERSIONS ~~~ ############################################################################
+#### PUT THE SPARK VERSIONS TO TEST IN CORRESPONDANCE WITH 'reference-versions.yml' FILE ###############################
+#### !!! ANY DECLARED TEST VERSION WHICH IS NOT PRESENT IN 'reference-versions.yml' FILE IS SKIPPED DURING BUILD !!! ###
+#### REMOVE, UPDATE OR ADD VERSIONS TO TEST ############################################################################
+versions:
+  # Maximum python version supported by spark-3.2.x: 3.9
+  # Java support: 8/11
+  - python_version: 3.9
+    spark_version: [3.2.4]
+    java_version: [11]
+    scala_version: [2.12]
+    hadoop_version: 3.2
+  # Maximum python version supported by spark-3.3.x: 3.10
+  # Java support: 8/11/17
+  - python_version: '3.10'
+    spark_version: [3.3.4]
+    java_version: [17]
+    scala_version: [2.12, 2.13]
+    hadoop_version: 3
+  # Maximum python version supported by spark-3.4.x: 3.11
+  # Java support: 8/11/17
+  - python_version: 3.11
+    spark_version: [3.4.2]
+    java_version: [17]
+    scala_version: [2.12, 2.13]
+    hadoop_version: 3
+  # https://spark.apache.org/releases/spark-release-3-5-0.html
+  # Minimum supported java version: 17/21
+  - python_version: 3.11
+    spark_version: [3.5.0]
+    java_version: [17]
+    scala_version: [2.13]
+    hadoop_version: 3
+
