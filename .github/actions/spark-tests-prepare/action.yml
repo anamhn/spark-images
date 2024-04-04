@@ -1,0 +1,63 @@
+#
+# Copyright 2024 tosit.io
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Prepare integration tests
+description: Prepare integration tests
+
+inputs:
+  spark_version:
+    description: Spark version
+    required: true
+  scala_version:
+    description: Scala version
+    required: true
+  java_version:
+    description: Java version
+    required: true
+
+outputs:
+  git_tag_checkout_dir:
+    description: "Git checkout tag local source directory"
+    value: ${{ steps.git-checkout-tag.outputs.git_tag_checkout_dir }}
+
+runs:
+  using: composite
+  # https://github.com/apache/spark/blob/master/.github/workflows/build_and_test.yml
+  steps:
+    - name: Set up Java ${{ inputs.java_version }}
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: ${{ inputs.java_version }}
+
+    - name: Cache Scala, SBT and Maven
+      uses: actions/cache@v4
+      with:
+        path: |
+          build/apache-maven-*
+          build/scala-*
+          build/*.jar
+          ~/.sbt
+        key: build-${{ inputs.spark_version }}-scala${{ inputs.scala_version }}-java${{ inputs.java_version }}
+
+    - name: Cache Coursier local repository
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/coursier
+        key: build-${{ inputs.spark_version }}-scala${{ inputs.scala_version }}-java${{ inputs.java_version }}-coursier
+
+
+
