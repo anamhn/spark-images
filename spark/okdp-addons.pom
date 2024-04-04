@@ -82,8 +82,46 @@
     </dependencies>
     <profiles>
         <profile>
-            <!-- minio/aws S3 
-            The AWS bandle can take up 500MB, to be optimized later! -->
+            <!-- aws S3: The AWS bandle can take up 500MB !, use the optimized okdp shaded jar -->
+            <id>minio</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.apache.hadoop</groupId>
+                    <artifactId>hadoop-aws</artifactId>
+                    <version>${hadoop.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>*</groupId>
+                            <artifactId>*</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+                 <!-- Locally installed dependency from 'minio.pom' file  
+                      A minimal artifact containing only S3 dependencies
+                 -->
+                <dependency>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>okdp-minio-aws-s3-bundle</artifactId>
+                    <version>${aws-java-sdk.version}</version>
+                </dependency>
+                <!-- S3A Committers:
+                https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-aws/src/site/markdown/tools/hadoop-aws/committers.md 
+                -->
+                <dependency>
+                    <groupId>org.apache.spark</groupId>
+                    <artifactId>spark-hadoop-cloud_${scala.version}</artifactId>
+                    <version>${spark.version}</version>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>*</groupId>
+                            <artifactId>*</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <!-- aws S3: The AWS bandle can take up 500MB ! -->
             <id>aws</id>
             <dependencies>
                 <dependency>
