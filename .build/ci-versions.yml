@@ -14,10 +14,11 @@
 # limitations under the License.
 #
 
-########### ~~~ CI TEST MATRIX VERSIONS ~~~ ############################################################################
-#### PUT THE SPARK VERSIONS TO TEST IN CORRESPONDANCE WITH 'reference-versions.yml' FILE ###############################
-#### !!! ANY DECLARED TEST VERSION WHICH IS NOT PRESENT IN 'reference-versions.yml' FILE IS SKIPPED DURING BUILD !!! ###
-#### REMOVE, UPDATE OR ADD VERSIONS TO TEST ############################################################################
+########### ~~~ CI TEST MATRIX VERSIONS ~~~ ######################################################################################
+########### DEFINE A CI REFERENCE COMBINATIONS TO TEST AND PREVENT TESTING ALL THE COMBINATION WITCH LEADS TO TAKE A LOT OF TIME #
+#### PUT THE SPARK VERSIONS TO TEST IN CORRESPONDANCE WITH 'reference-versions.yml' FILE #########################################
+#### !!! ANY DECLARED TEST VERSION WHICH IS NOT PRESENT IN 'reference-versions.yml' FILE IS SKIPPED DURING BUILD !!! #############
+#### REMOVE, UPDATE OR ADD VERSIONS TO TEST ######################################################################################
 versions:
   # Maximum python version supported by spark-3.2.x: 3.9
   # Java support: 8/11
@@ -43,7 +44,7 @@ versions:
   # https://spark.apache.org/releases/spark-release-3-5-0.html
   # Minimum supported java version: 17/21
   - python_version: 3.11
-    spark_version: [3.5.0]
+    spark_version: [3.5.1]
     java_version: [17]
     scala_version: [2.13]
     hadoop_version: 3

@@ -140,6 +140,13 @@ jobs:
             BASE_IMAGE=${{ steps.image-tags.outputs.parent_image }}
           tags: |
             ${{ steps.registry-repos.outputs.ci_repo }}/${{ inputs.image }}:${{ steps.image-tags.outputs.latest_tag }}
+          labels: |
+            org.opencontainers.image.title="${{ inputs.image }}"
+            org.opencontainers.image.version="${{ inputs.spark_version}}"
+            org.opencontainers.image.description="Spark image"
+            org.opencontainers.image.base.name="${{ steps.image-tags.outputs.parent_image }}"
+            org.opencontainers.image.source="https://github.com/${{ github.repository }}"
+            org.opencontainers.image.licenses="Apache-2.0"
 
       ### CI Steps
       # https://github.com/nektos/act/issues/678
@@ -202,5 +209,11 @@ jobs:
             HADOOP_VERSION=${{ inputs.hadoop_version }}
             BASE_IMAGE=${{ steps.image-tags.outputs.parent_image }}
           tags: ${{ steps.image-tags.outputs.publish_tags }}
-
+          labels: |
+            org.opencontainers.image.title="${{ inputs.image }}"
+            org.opencontainers.image.version="${{ inputs.spark_version}}"
+            org.opencontainers.image.description="Spark image"
+            org.opencontainers.image.base.name="${{ steps.image-tags.outputs.parent_image }}"
+            org.opencontainers.image.source="https://github.com/${{ github.repository }}"
+            org.opencontainers.image.licenses="Apache-2.0"
 

@@ -3,7 +3,7 @@
 [![License Apache2](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 
-Collection of [Apache Spark](https://spark.apache.org/) docker images for [OKDP platform](https://okdp.io/).
+Collection of [Apache Spark](https://spark.apache.org/) docker images for [OKDP Platform](https://okdp.io/).
 
 Currently, the images are built from the [Apache Spark project distribution](https://archive.apache.org/dist/spark) and the requirement may evolve to produce them from the [source code](https://github.com/apache/spark).
 
@@ -28,9 +28,9 @@ The image relashionship is described by the following diagram:
 
 The project builds the images with a long format tags. Each tag combines multiple compatible versions combinations.
 
-There are multiple tags levels and the format to use is depending on your convenience in term of stability and reproducibility.
+There are multiple tags levels and the format to use depends on your convenience in term of stability and reproducibility.
 
-The images are pushed to [OKDP quay.io](https://quay.io/organization/okdp) repository with the following [tags](.build/images.yml):
+The images are pushed to [quay.io/okdp](https://quay.io/organization/okdp) repository with the following [tags](.build/images.yml):
 
 | Images              | Tags                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 |:--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -40,13 +40,21 @@ The images are pushed to [OKDP quay.io](https://quay.io/organization/okdp) repos
 
 > [!NOTE]
 > 1. `<RELEASE_VERSION>` corresponds to the Github [release version](https://github.com/okdp/spark-images/releases) or [git tag](https://github.com/okdp/spark-images/tags) without the leading `v`.
->  Ex.: 1.0.0
+>    Ex.: 1.0.0
 > 
-> 2. `<BUILD_DATE>` corresponds to the images build date with the `YYYY-MM-DD` format. The latest release tag is built every week.
+> 2. `<BUILD_DATE>` corresponds to the images build date with the `YYYY-MM-DD` format. The latest release tag is rebuilt every week to ensure the OS image is up to date against the latest security updates.
 > 
-> An example of a `py-spark` image with a long form tag including `spark/java/scala/python` compatible versions and a `build date` with a `release version` is: 
+>    You may need to switch to the latest release version if your are using the long form tag image with a `<RELEASE_VERSION>`. Please, check the [changelog](https://github.com/okdp/spark-images/releases) to see the notable impacts.
+>
+>    An example of `py-spark` image with a long form tag including `spark/java/scala/python` compatible versions and a `<BUILD_DATE>` with a `<RELEASE_VERSION>` is: 
 > 
-> `quay.io/okdp/spark-py:spark-3.3.4-python-3.10-scala-2.12-java-17-2024-03-29-1.0.0`.
+>    `quay.io/okdp/spark-py:spark-3.5.1-python-3.11-scala-2.13-java-17-2024-04-04-1.0.0`.
+>
+>    The corresponding changelog is [releases/tag/v1.0.0](https://github.com/okdp/spark-images/releases/tag/v1.0.0).
+>
+> 3. You can also use the latest tag without `<BUILD_DATE>` and `<RELEASE_VERSION>` which is always up to date with the latest security updates. 
+> 
+>    An example of `py-spark` image with the latest tag is: `quay.io/okdp/spark-py:spark-3.5.1-python-3.11-scala-2.13-java-17`
 >
 
 # Alternatives
