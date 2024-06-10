@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.1](https://github.com/OKDP/spark-images/compare/v1.0.0...v1.0.1) (2024-06-10)
+
+
+### Bug Fixes
+
+* **okdp-addons/okdp-spark-auth-filter:** Improve management of IDP supported scopes and offline_access OKDP/okdp-spark-auth-filter[#16](https://github.com/OKDP/spark-images/issues/16) ([2310f1c](https://github.com/OKDP/spark-images/commit/2310f1c36b2a02c1db4b61d75b4b3bf206fa944e))
+
+
+### Miscellaneous Chores
+
+* release 1.0.1 ([5436219](https://github.com/OKDP/spark-images/commit/54362192d0b1146d6a01b40fece338bba3f341c0))
+
 ## 1.0.0 (2024-04-04)
 
 
