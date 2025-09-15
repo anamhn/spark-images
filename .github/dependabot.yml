@@ -1,0 +1,56 @@
+version: 2
+updates:
+  # Update Docker dependencies in spark directory
+  - package-ecosystem: "docker"
+    directory: "/spark"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(update)"
+
+  # Update Docker dependencies in spark-base directory
+  - package-ecosystem: "docker"
+    directory: "/spark-base"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(update)"
+
+  # Update Docker dependencies in spark-py directory
+  - package-ecosystem: "docker"
+    directory: "/spark-py"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(update)"
+
+  # Update Docker dependencies in spark-r directory
+  - package-ecosystem: "docker"
+    directory: "/spark-r"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(update)"
+
+  # Update GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(update)"
