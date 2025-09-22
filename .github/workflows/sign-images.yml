@@ -18,7 +18,7 @@ name: Sign Images with Cosign
 
 on:
   workflow_run:
-    workflows: ["ci"]
+    workflows: ["spark build multiple images template"]
     types:
       - completed
   workflow_dispatch:
