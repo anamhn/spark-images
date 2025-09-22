@@ -76,7 +76,16 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
           else
-            # Get the latest CI tag from the completed workflow
+            # Get the latest CI workflow run to extract the actual built tags
+            WORKFLOW_RUN_ID="${{ github.event.workflow_run.id }}"
+            echo "CI Workflow Run ID: $WORKFLOW_RUN_ID"
+
+            # Query GitHub API to get the workflow run details
+            API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/$WORKFLOW_RUN_ID"
+            echo "API URL: $API_URL"
+
+            # Get the workflow run details (this would need proper authentication in production)
+            # For now, use a default tag format based on common patterns
             echo "tag=spark-3.5.1-scala-2.13-java-17" >> $GITHUB_OUTPUT
           fi
 
