@@ -4,7 +4,6 @@ set -e
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <image-name> <image-tag>"
-    echo "Example: $0 spark-base spark-3.5.1-scala-2.13-java-17"
     exit 1
 fi
 
@@ -23,7 +22,6 @@ fi
 # Check if the image exists locally
 if ! docker image inspect "${FULL_IMAGE_REF}" >/dev/null 2>&1; then
     echo "❌ Image ${FULL_IMAGE_REF} not found locally"
-    echo "💡 Build the image first using the GitHub Actions workflow"
     exit 1
 fi
 
@@ -53,5 +51,4 @@ echo "✅ Successfully signed ${FULL_IMAGE_REF}"
 
 if [ -n "${SBOM_FILE}" ] && [ -f "${SBOM_FILE}" ]; then
     echo "📋 SBOM attached successfully"
-    echo "📄 SBOM file: ${SBOM_FILE}"
 fi

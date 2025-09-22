@@ -94,7 +94,6 @@ jobs:
         run: |
           ./cosign-linux-amd64 attest --yes --predicate ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json --type spdx --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
           ./cosign-linux-amd64 sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
-          echo "✅ Image signed and SBOM attached"
 
       - name: Verify signature 🔍
         run: |

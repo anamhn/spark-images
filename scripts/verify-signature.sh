@@ -7,7 +7,6 @@ set -e
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <image-name> <image-tag>"
-    echo "Example: $0 spark-base spark-3.5.1-scala-2.13-java-17"
     exit 1
 fi
 
@@ -51,9 +50,6 @@ if ./cosign-linux-amd64 download attestation "${FULL_IMAGE_REF}" >/dev/null 2>&1
         echo "📦 Package count: $(jq '.packages | length' "${SBOM_TEMP}")"
         echo "📅 Created: $(jq -r '.creationInfo.created' "${SBOM_TEMP}")"
         echo "🛠️  Tool: $(jq -r '.creationInfo.creators[0].creator' "${SBOM_TEMP}")"
-        echo ""
-        echo "📦 Top 10 packages:"
-        jq -r '.packages[0:10][] | "\(.name)@\(.versionInfo)"' "${SBOM_TEMP}"
     else
         echo "💡 Install jq to see detailed SBOM information"
     fi
