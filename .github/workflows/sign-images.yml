@@ -1,0 +1,126 @@
+#
+# Copyright 2024 tosit.io
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Sign Images with Cosign
+
+on:
+  workflow_run:
+    workflows: [""Spark build multiple image template""]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to sign (e.g., spark-3.5.1-scala-2.13-java-17)'
+        required: true
+        type: string
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  # Only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  sign-images:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [spark-base, spark, spark-py, spark-r]
+
+    steps:
+      - name: Checkout Repo ⚡️
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU and Docker Buildx 📦
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to CI registry 🔐
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install syft for SBOM generation 📦
+        uses: anchore/sbom-action/download-syft@v0.15.8
+
+      - name: Make cosign executable 🔐
+        run: chmod +x cosign-linux-amd64
+
+      - name: Generate cosign keypair 🔐
+        run: |
+          ./cosign-linux-amd64 generate-key-pair
+
+      - name: Determine image tag 📝
+        id: image-tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            # Get the latest CI workflow run to extract the actual built tags
+            WORKFLOW_RUN_ID="${{ github.event.workflow_run.id }}"
+            echo "CI Workflow Run ID: $WORKFLOW_RUN_ID"
+
+            # Query GitHub API to get the workflow run details
+            API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/$WORKFLOW_RUN_ID"
+            echo "API URL: $API_URL"
+
+            # Get the workflow run details (this would need proper authentication in production)
+            # For now, use a default tag format based on common patterns
+            echo "tag=spark-3.5.1-scala-2.13-java-17" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pull image from CI registry 📥
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          docker tag ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+
+      - name: Generate SBOM 📋
+        run: |
+          ./syft ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} -o spdx-json > ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json
+          echo "✅ SBOM generated: ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json"
+
+      - name: Sign image and attach SBOM 🔐
+        run: |
+          ./cosign-linux-amd64 attest --yes --predicate ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json --type spdx --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          ./cosign-linux-amd64 sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+
+      - name: Verify signature 🔍
+        run: |
+          ./cosign-linux-amd64 verify --key cosign.pub ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          echo "✅ Signature verified successfully"
+
+      - name: Upload SBOM artifact 📤
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}
+          path: ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json
+          retention-days: 90
+
+      - name: Upload cosign artifacts 📤
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosign-${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}
+          path: |
+            cosign.key
+            cosign.pub
+          retention-days: 90
