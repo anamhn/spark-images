@@ -18,7 +18,7 @@ name: Sign Images with Cosign
 
 on:
   workflow_run:
-    workflows: [""Spark build multiple image template""]
+    workflows: ["Spark build multiple images template"]  # Fixed: removed extra quotes and corrected name
     types:
       - completed
   workflow_dispatch:
@@ -63,12 +63,14 @@ jobs:
       - name: Install syft for SBOM generation 📦
         uses: anchore/sbom-action/download-syft@v0.15.8
 
-      - name: Make cosign executable 🔐
-        run: chmod +x cosign-linux-amd64
+      - name: Install cosign 🔐
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: 'v2.2.0'
 
       - name: Generate cosign keypair 🔐
         run: |
-          ./cosign-linux-amd64 generate-key-pair
+          cosign generate-key-pair
 
       - name: Determine image tag 📝
         id: image-tag
@@ -76,16 +78,7 @@ jobs:
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
           else
-            # Get the latest CI workflow run to extract the actual built tags
-            WORKFLOW_RUN_ID="${{ github.event.workflow_run.id }}"
-            echo "CI Workflow Run ID: $WORKFLOW_RUN_ID"
-
-            # Query GitHub API to get the workflow run details
-            API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/$WORKFLOW_RUN_ID"
-            echo "API URL: $API_URL"
-
-            # Get the workflow run details (this would need proper authentication in production)
-            # For now, use a default tag format based on common patterns
+            # Use a default tag format based on common patterns
             echo "tag=spark-3.5.1-scala-2.13-java-17" >> $GITHUB_OUTPUT
           fi
 
@@ -96,17 +89,17 @@ jobs:
 
       - name: Generate SBOM 📋
         run: |
-          ./syft ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} -o spdx-json > ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json
+          syft ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} -o spdx-json > ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json
           echo "✅ SBOM generated: ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json"
 
       - name: Sign image and attach SBOM 🔐
         run: |
-          ./cosign-linux-amd64 attest --yes --predicate ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json --type spdx --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
-          ./cosign-linux-amd64 sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          cosign attest --yes --predicate ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json --type spdx --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          cosign sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
 
       - name: Verify signature 🔍
         run: |
-          ./cosign-linux-amd64 verify --key cosign.pub ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          cosign verify --key cosign.pub ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
           echo "✅ Signature verified successfully"
 
       - name: Upload SBOM artifact 📤
