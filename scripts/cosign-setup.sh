@@ -1,14 +1,13 @@
 #!/bin/bash
 set -e
 
-chmod +x cosign-linux-amd64
-./cosign-linux-amd64 version
+# Set up environment variables to handle TUF connectivity issues
+export COSIGN_EXPERIMENTAL=1
 
-# Generate a keypair for signing (if not exists)
-if [ ! -f "cosign.key" ]; then
-    ./cosign-linux-amd64 generate-key-pair
-    echo "✅ Keypair generated: cosign.key (private) and cosign.pub (public)"
-else
-    echo "🔑 Cosign keypair already exists"
-fi
+echo "🔐 Setting up cosign for image signing..."
+
+# Check if cosign is available
+if command -v cosign >/dev/null 2>&1; then
+    echo "✅ Cosign already installed"
+    cosign version
 

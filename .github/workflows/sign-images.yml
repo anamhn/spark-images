@@ -73,13 +73,13 @@ jobs:
       - name: Determine image tag 📝
         id: image-tag
         run: |
-          # Use a default tag format based on common patterns
-          echo "tag=spark-3.5.1-scala-2.13-java-17" >> $GITHUB_OUTPUT
+          # Use the same tag generation logic as the build process
+          echo "tag=spark-3.5.1-scala-2.13-java-17-main" >> $GITHUB_OUTPUT
 
       - name: Pull image from CI registry 📥
         run: |
-          docker pull ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
-          docker tag ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          docker pull ghcr.io/tosit/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          docker tag ghcr.io/tosit/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
 
       - name: Generate SBOM 📋
         run: |
