@@ -56,7 +56,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install syft for SBOM generation 📦
-        uses: anchore/sbom-action/download-syft@v0.15.8
+        uses: anchore/sbom-action/download-syft@v0.20.6
 
       - name: Install cosign 🔐
         run: |
