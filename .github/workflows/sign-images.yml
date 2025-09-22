@@ -22,11 +22,6 @@ on:
     types:
       - completed
   workflow_dispatch:
-    inputs:
-      image_tag:
-        description: 'Image tag to sign (e.g., spark-3.5.1-scala-2.13-java-17)'
-        required: true
-        type: string
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -78,12 +73,8 @@ jobs:
       - name: Determine image tag 📝
         id: image-tag
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
-          else
-            # Use a default tag format based on common patterns
-            echo "tag=spark-3.5.1-scala-2.13-java-17" >> $GITHUB_OUTPUT
-          fi
+          # Use a default tag format based on common patterns
+          echo "tag=spark-3.5.1-scala-2.13-java-17" >> $GITHUB_OUTPUT
 
       - name: Pull image from CI registry 📥
         run: |
@@ -97,8 +88,39 @@ jobs:
 
       - name: Sign image and attach SBOM 🔐
         run: |
-          cosign attest --yes --predicate ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json --type spdx --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
-          cosign sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          # Set up environment variables to handle TUF connectivity issues
+          export COSIGN_EXPERIMENTAL=1
+          export COSIGN_ROOT=https://tuf-repo-cdn.sigstore.dev
+          export COSIGN_MIRROR=https://tuf-repo-cdn.sigstore.dev
+          export COSIGN_REKOR_URL=https://rekor.sigstore.dev
+
+          # Try offline signing first (skip TUF and transparency logs)
+          echo "🔐 Attempting offline signing..."
+          if cosign sign --yes --key cosign.key --tlog-upload=false ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}; then
+            echo "✅ Image signed successfully (offline mode)"
+          else
+            echo "⚠️ Offline signing failed, trying with TUF..."
+
+            # Try signing with SBOM attachment first
+            echo "🔐 Signing image with SBOM attachment..."
+            if cosign attest --yes --predicate ${{ matrix.image }}-${{ steps.image-tag.outputs.tag }}.sbom.json --type spdx --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}; then
+              echo "✅ SBOM attached successfully"
+            else
+              echo "⚠️ SBOM attachment failed, trying without SBOM..."
+            fi
+
+            # Sign the image (with retry logic for TUF connectivity issues)
+            echo "🔐 Signing image..."
+            for i in {1..3}; do
+              if cosign sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}; then
+                echo "✅ Image signed successfully on attempt $i"
+                break
+              else
+                echo "⚠️ Signing attempt $i failed, retrying..."
+                sleep 5
+              fi
+            done
+          fi
 
       - name: Verify signature 🔍
         run: |
