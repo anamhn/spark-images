@@ -78,8 +78,8 @@ jobs:
 
       - name: Pull image from CI registry 📥
         run: |
-          docker pull ghcr.io/tosit/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
-          docker tag ghcr.io/tosit/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          docker pull ghcr.io/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
+          docker tag ghcr.io/${{ matrix.image }}:${{ steps.image-tag.outputs.tag }} ${{ matrix.image }}:${{ steps.image-tag.outputs.tag }}
 
       - name: Generate SBOM 📋
         run: |
