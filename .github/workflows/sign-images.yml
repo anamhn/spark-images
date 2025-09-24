@@ -23,9 +23,7 @@ on:
       - completed
   workflow_dispatch:
 
-# https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-  # Only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -34,19 +32,19 @@ permissions:
   contents: read
 
 jobs:
-  # get-ci-versions:
-  #   runs-on: "ubuntu-latest"
-  #   outputs:
-  #     matrix: ${{ steps.ci-versions.outputs.matrix }}
-  #   steps:
-  #     - name: Checkout Repo ⚡️
-  #       uses: actions/checkout@v4
-
-  #     - name: Get CI versions matrix 📥
-  #       id: ci-versions
-  #       uses: ./.github/actions/spark-version-matrix
-  #       with:
-  #         use_matrix: ".build/ci-versions.yml"
+  get-ci-versions:
+    runs-on: "ubuntu-latest"
+    outputs:
+      matrix: ${{ steps.ci-versions.outputs.matrix }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        
+      - name: Get CI versions matrix
+        id: ci-versions
+        uses: ./.github/actions/spark-version-matrix
+        with:
+          use_matrix: ".build/ci-versions.yml"
 
   sign-images:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
@@ -59,17 +57,16 @@ jobs:
         image: [spark-base, spark, spark-py, spark-r]
 
     steps:
-      - name: Checkout Repo ⚡️
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Set up CI registry 📦
+      - name: Set up CI registry
         id: registry-repos
         run: |
-          echo "repo_owner=${GITHUB_REPOSITORY_OWNER@L}" >> $GITHUB_OUTPUT
           echo "ci_repo=ghcr.io/${GITHUB_REPOSITORY_OWNER@L}" >> $GITHUB_OUTPUT
         shell: bash
 
-      - name: Generate image tags 📦
+      - name: Generate image tags
         id: image-tags
         uses: ./.github/actions/spark-image-tag
         with:
@@ -79,82 +76,48 @@ jobs:
           java_version: ${{ matrix.version.java_version }}
           python_version: ${{ matrix.version.python_version }}
           ci_repo: ${{ steps.registry-repos.outputs.ci_repo }}
-          publish_repo: ""
           publish_to_registry: "false"
-          git_tag_name: ""
 
-      - name: Login to CI registry 🔐
+      - name: Login to CI registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install syft for SBOM generation 📦
-        uses: anchore/sbom-action/download-syft@v0.15.8
-
-      - name: Install cosign 🔐
+      - name: Install tools
         run: |
-          wget https://github.com/sigstore/cosign/releases/download/v2.1.1/cosign-linux-amd64
+          # Install syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          
+          # Install cosign
+          wget -q https://github.com/sigstore/cosign/releases/download/v2.1.1/cosign-linux-amd64
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
-          cosign version
 
-      - name: Generate cosign keypair 🔐
-        run: |
-          cosign generate-key-pair
+      - name: Generate cosign keypair
+        run: cosign generate-key-pair
 
-      - name: Pull image from CI registry 📥
+      - name: Pull and sign image
         run: |
+          # Pull image
           IMAGE_URL="${{ steps.registry-repos.outputs.ci_repo }}/${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}"
           echo "Pulling image: ${IMAGE_URL}"
           docker pull ${IMAGE_URL}
-          docker tag ${IMAGE_URL} ${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}
-
-      - name: Generate SBOM 📋
-        run: |
-          syft ${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }} -o spdx-json > ${{ matrix.image }}-${{ steps.image-tags.outputs.latest_tag }}.sbom.json
-          echo "✅ SBOM generated: ${{ matrix.image }}-${{ steps.image-tags.outputs.latest_tag }}.sbom.json"
-
-      - name: Sign image and attach SBOM 🔐
-        run: |
-          export COSIGN_EXPERIMENTAL=1
           
-          echo "🔐 Attempting offline signing..."
-          if cosign sign --yes --key cosign.key --tlog-upload=false ${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}; then
-            echo "✅ Image signed successfully (offline mode)"
-          else
-            echo "⚠️ Offline signing failed, trying with TUF..."
-            
-            echo "🔐 Signing image..."
-            for i in {1..3}; do
-              if cosign sign --yes --key cosign.key ${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}; then
-                echo "✅ Image signed successfully on attempt $i"
-                break
-              else
-                echo "⚠️ Signing attempt $i failed, retrying..."
-                sleep 5
-              fi
-            done
-          fi
+          # Generate SBOM
+          syft ${IMAGE_URL} -o spdx-json > ${{ matrix.image }}-${{ steps.image-tags.outputs.latest_tag }}.sbom.json
+          
+          # Sign image
+          export COSIGN_EXPERIMENTAL=1
+          cosign sign --yes --key cosign.key ${IMAGE_URL}
 
-      # - name: Verify signature 🔍
-      #   run: |
-      #     cosign verify --key cosign.pub ${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}
-      #     echo "✅ Signature verified successfully"
-
-      - name: Upload SBOM artifact 📤
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sbom-${{ matrix.image }}-${{ matrix.version.spark_version }}-${{ matrix.version.scala_version }}-${{ matrix.version.java_version }}
-          path: ${{ matrix.image }}-${{ steps.image-tags.outputs.latest_tag }}.sbom.json
-          retention-days: 90
-
-      - name: Upload cosign artifacts 📤
-        uses: actions/upload-artifact@v4
-        with:
-          name: cosign-${{ matrix.image }}-${{ matrix.version.spark_version }}-${{ matrix.version.scala_version }}-${{ matrix.version.java_version }}
+          name: signing-artifacts-${{ matrix.image }}-${{ matrix.version.spark_version }}
           path: |
+            *.sbom.json
             cosign.key
             cosign.pub
-          retention-days: 90
+          retention-days: 30
