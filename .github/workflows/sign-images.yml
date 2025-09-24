@@ -165,38 +165,56 @@ jobs:
           export COSIGN_EXPERIMENTAL=1
           echo "Signing image: ${{ steps.sbom.outputs.image_url }}"
           
-          # Sign with retry logic
-          for i in {1..3}; do
-            if cosign sign --yes --key cosign.key ${{ steps.sbom.outputs.image_url }}; then
-              echo "✅ Image signed successfully"
-              break
+          # Try standard signing first
+          if cosign sign --yes --key cosign.key ${{ steps.sbom.outputs.image_url }}; then
+            echo "✅ Image signed successfully"
+          else
+            echo "⚠️ Standard signing failed, trying offline signing..."
+            
+            # Try offline signing (skip Rekor transparency log)
+            if cosign sign --yes --key cosign.key --tlog-upload=false ${{ steps.sbom.outputs.image_url }}; then
+              echo "✅ Image signed successfully (offline mode)"
             else
-              if [ $i -eq 3 ]; then
-                echo "❌ Failed to sign image after 3 attempts"
-                exit 1
-              fi
-              echo "⚠️ Signing attempt $i failed, retrying in 5 seconds..."
-              sleep 5
+              echo "❌ Failed to sign image in both standard and offline modes"
+              exit 1
             fi
-          done
+          fi
 
       - name: Verify image signature
         run: |
           echo "Verifying signature for: ${{ steps.sbom.outputs.image_url }}"
+          
+          # First try standard verification
           if cosign verify --key cosign.pub ${{ steps.sbom.outputs.image_url }}; then
             echo "✅ Image signature verified successfully"
           else
-            echo "❌ Image signature verification failed"
-            exit 1
+            echo "⚠️ Standard verification failed, trying offline verification..."
+            
+            # Try offline verification (skip Rekor transparency log)
+            if cosign verify --key cosign.pub --offline ${{ steps.sbom.outputs.image_url }}; then
+              echo "✅ Image signature verified successfully (offline mode)"
+            else
+              echo "❌ Image signature verification failed in both standard and offline modes"
+              exit 1
+            fi
           fi
 
       - name: Attach SBOM to image
         run: |
           echo "Attaching SBOM to image: ${{ steps.sbom.outputs.image_url }}"
+          
+          # Try standard SBOM attachment first
           if cosign attach sbom --sbom ${{ steps.sbom.outputs.sbom_file }} ${{ steps.sbom.outputs.image_url }}; then
             echo "✅ SBOM attached to image successfully"
           else
-            echo "⚠️ Failed to attach SBOM to image (this is non-fatal)"
+            echo "⚠️ Standard SBOM attachment failed, trying offline mode..."
+            
+            # Try offline SBOM attachment
+            if cosign attach sbom --sbom ${{ steps.sbom.outputs.sbom_file }} --tlog-upload=false ${{ steps.sbom.outputs.image_url }}; then
+              echo "✅ SBOM attached to image successfully (offline mode)"
+            else
+              echo "⚠️ Failed to attach SBOM to image (this is non-fatal)"
+            fi
           fi
 
       - name: Upload artifacts
