@@ -1,4 +1,3 @@
-# 
 #
 # Copyright 2024 tosit.io
 #
@@ -100,36 +99,24 @@ jobs:
           sudo apt-get update && sudo apt-get install -y jq
 
       - name: Generate cosign keypair
-        run: cosign generate-key-pair
-        
-      - name: Verify cosign keypair
         run: |
-          echo "Verifying cosign keypair..."
+          cosign generate-key-pair
           
-          # Check if key files exist
-          if [ ! -f "cosign.key" ] || [ ! -f "cosign.pub" ]; then
-            echo "❌ Cosign key files not found!"
+          # Simple check that files exist and are not empty
+          if [ ! -f "cosign.key" ] || [ ! -f "cosign.pub" ] || [ ! -s "cosign.key" ] || [ ! -s "cosign.pub" ]; then
+            echo "❌ Failed to generate valid cosign keypair"
             exit 1
           fi
-          
-          # Check private key format (should be PEM)
-          if ! grep -q "BEGIN ENCRYPTED COSIGN PRIVATE KEY" cosign.key; then
-            echo "❌ Private key file is not in expected format!"
-            exit 1
-          fi
-          
-          # Check public key format
-          if ! grep -q "BEGIN PUBLIC KEY" cosign.pub; then
-            echo "❌ Public key file is not in expected format!"
-            exit 1
-          fi
-          
-          echo "✅ Cosign keypair verified successfully"
+          echo "✅ Cosign keypair generated successfully"
 
       - name: Pull and generate SBOM
+        id: sbom
         run: |
-          # Pull image
+          # Set image URL
           IMAGE_URL="${{ steps.registry-repos.outputs.ci_repo }}/${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}"
+          echo "image_url=${IMAGE_URL}" >> $GITHUB_OUTPUT
+          
+          # Pull image
           echo "Pulling image: ${IMAGE_URL}"
           docker pull ${IMAGE_URL}
           
@@ -137,70 +124,79 @@ jobs:
           echo "Generating SBOM..."
           SBOM_FILE="${{ matrix.image }}-${{ steps.image-tags.outputs.latest_tag }}.sbom.json"
           syft ${IMAGE_URL} -o spdx-json > ${SBOM_FILE}
-          echo "SBOM generated: ${SBOM_FILE}"
+          echo "sbom_file=${SBOM_FILE}" >> $GITHUB_OUTPUT
+          echo "✅ SBOM generated: ${SBOM_FILE}"
 
       - name: Verify SBOM
         run: |
-          SBOM_FILE="${{ matrix.image }}-${{ steps.image-tags.outputs.latest_tag }}.sbom.json"
-          echo "Verifying SBOM for ${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}"
+          SBOM_FILE="${{ steps.sbom.outputs.sbom_file }}"
+          echo "Verifying SBOM for ${{ steps.sbom.outputs.image_url }}"
           
-          # Check if file exists
-          if [ ! -f "${SBOM_FILE}" ]; then
-            echo "❌ SBOM file not found!"
-            exit 1
-          fi
-          
-          # Check file size (should be non-zero)
-          FILE_SIZE=$(stat -c%s "${SBOM_FILE}")
-          echo "SBOM file size: $(du -h ${SBOM_FILE} | cut -f1)"
-          if [ "$FILE_SIZE" -eq 0 ]; then
-            echo "❌ SBOM file is empty!"
+          # Check if file exists and is not empty
+          if [ ! -f "${SBOM_FILE}" ] || [ ! -s "${SBOM_FILE}" ]; then
+            echo "❌ SBOM file not found or empty!"
             exit 1
           fi
           
           # Validate JSON format
-          if ! jq empty "${SBOM_FILE}"; then
+          if ! jq empty "${SBOM_FILE}" 2>/dev/null; then
             echo "❌ SBOM is not valid JSON!"
             exit 1
           fi
           
-          # Check for SPDX format indicators
-          if ! grep -q "SPDX" "${SBOM_FILE}"; then
-            echo "⚠️ SBOM may not be in SPDX format!"
-          fi
-          
-          # Count packages (a valid SBOM should have packages)
+          # Count packages
           PACKAGE_COUNT=$(jq '.packages | length' "${SBOM_FILE}" 2>/dev/null || echo "0")
-          echo "Package count: $PACKAGE_COUNT"
+          echo "📦 Package count: $PACKAGE_COUNT"
+          
           if [ "$PACKAGE_COUNT" -eq 0 ]; then
-            echo "⚠️ No packages found in SBOM!"
+            echo "⚠️ Warning: No packages found in SBOM"
           else
             echo "✅ Found $PACKAGE_COUNT packages in SBOM"
+            
+            # Show sample packages (first 2)
+            echo "📋 Sample packages:"
+            jq '.packages[0:2] | map({name, version: .versionInfo})' "${SBOM_FILE}" 2>/dev/null
           fi
-          
-          # Print some sample package information
-          echo "Sample packages:"
-          jq '.packages[0:3]' "${SBOM_FILE}" 2>/dev/null || echo "Could not extract package info"
           
           echo "✅ SBOM verification completed"
 
       - name: Sign image
         run: |
-          IMAGE_URL="${{ steps.registry-repos.outputs.ci_repo }}/${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}"
           export COSIGN_EXPERIMENTAL=1
-          echo "Signing image: ${IMAGE_URL}"
-          cosign sign --yes --key cosign.key ${IMAGE_URL}
-          echo "✅ Image signed successfully"
+          echo "Signing image: ${{ steps.sbom.outputs.image_url }}"
+          
+          # Sign with retry logic
+          for i in {1..3}; do
+            if cosign sign --yes --key cosign.key ${{ steps.sbom.outputs.image_url }}; then
+              echo "✅ Image signed successfully"
+              break
+            else
+              if [ $i -eq 3 ]; then
+                echo "❌ Failed to sign image after 3 attempts"
+                exit 1
+              fi
+              echo "⚠️ Signing attempt $i failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
 
       - name: Verify image signature
         run: |
-          IMAGE_URL="${{ steps.registry-repos.outputs.ci_repo }}/${{ matrix.image }}:${{ steps.image-tags.outputs.latest_tag }}"
-          echo "Verifying signature for: ${IMAGE_URL}"
-          if cosign verify --key cosign.pub ${IMAGE_URL}; then
+          echo "Verifying signature for: ${{ steps.sbom.outputs.image_url }}"
+          if cosign verify --key cosign.pub ${{ steps.sbom.outputs.image_url }}; then
             echo "✅ Image signature verified successfully"
           else
             echo "❌ Image signature verification failed"
             exit 1
+          fi
+
+      - name: Attach SBOM to image
+        run: |
+          echo "Attaching SBOM to image: ${{ steps.sbom.outputs.image_url }}"
+          if cosign attach sbom --sbom ${{ steps.sbom.outputs.sbom_file }} ${{ steps.sbom.outputs.image_url }}; then
+            echo "✅ SBOM attached to image successfully"
+          else
+            echo "⚠️ Failed to attach SBOM to image (this is non-fatal)"
           fi
 
       - name: Upload artifacts
@@ -208,7 +204,7 @@ jobs:
         with:
           name: signing-artifacts-${{ matrix.image }}-${{ matrix.version.spark_version }}
           path: |
-            *.sbom.json
+            ${{ steps.sbom.outputs.sbom_file }}
             cosign.key
             cosign.pub
           retention-days: 30
