@@ -89,12 +89,14 @@ jobs:
         run: |
           # Install syft
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          
+
           # Install cosign
-          wget -q https://github.com/sigstore/cosign/releases/download/v2.1.1/cosign-linux-amd64
+          wget -q https://github.com/sigstore/cosign/releases/download/v2.6.0/cosign-linux-amd64
+          wget -q https://github.com/sigstore/cosign/releases/download/v2.6.0/SHA256SUMS
+          sha256sum --check --ignore-missing SHA256SUMS
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
-          
+
           # Install jq for JSON validation
           sudo apt-get update && sudo apt-get install -y jq
 
