@@ -87,18 +87,48 @@ jobs:
 
       - name: Install tools
         run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y jq curl wget
+          
           # Install syft
+          echo "Installing syft..."
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-
+          
+          # Verify syft installation
+          if ! command -v syft &> /dev/null; then
+            exit 1
+          fi
+          
+          # Install cosign with better error handling
+          COSIGN_VERSION="v2.6.0"
+          
+          # Download cosign binary
+          if ! wget -q "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"; then
+            exit 1
+          fi
+          
+          # Download checksums
+          if ! wget -q "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/SHA256SUMS"; then
+            exit 1
+          fi
+          
+          # Verify checksum
+          if ! sha256sum --check --ignore-missing SHA256SUMS; then
+            echo "Downloaded file checksum:"
+            sha256sum cosign-linux-amd64 || true
+            rm -f cosign-linux-amd64 SHA256SUMS
+          
           # Install cosign
-          wget -q https://github.com/sigstore/cosign/releases/download/v2.6.0/cosign-linux-amd64
-          wget -q https://github.com/sigstore/cosign/releases/download/v2.6.0/SHA256SUMS
-          sha256sum --check --ignore-missing SHA256SUMS
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
-
-          # Install jq for JSON validation
-          sudo apt-get update && sudo apt-get install -y jq
+          
+          # Verify cosign installation
+          if ! command -v cosign &> /dev/null; then
+            exit 1
+          fi
+          
+          # Clean up
+          rm -f SHA256SUMS
 
       - name: Generate cosign keypair
         run: |
