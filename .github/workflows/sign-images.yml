@@ -91,13 +91,13 @@ jobs:
           sudo apt-get update && sudo apt-get install -y jq curl wget
 
           # Install specific version of syft
-          VERSION="v1.34.1"  # Set your desired version here
+          VERSION="1.32.0"  # Set your desired version here
           ARCH="amd64"      # Change if needed (e.g., arm64)
           OS="linux"
 
-          curl -L -o /tmp/syft.tar.gz "https://github.com/anchore/syft/releases/download/${VERSION}/syft-${VERSION}-${OS}-${ARCH}.tar.gz"
+          curl -L -o /tmp/syft.tar.gz "https://github.com/anchore/syft/releases/download/v${VERSION}/syft_${VERSION}_${OS}_${ARCH}.tar.gz"
           tar -xzvf /tmp/syft.tar.gz -C /tmp
-          sudo mv /tmp/syft-${VERSION}-${OS}-${ARCH}/syft /usr/local/bin/
+          sudo mv /tmp/syft_${VERSION}_${OS}_${ARCH}/syft /usr/local/bin/
           sudo chmod +x /usr/local/bin/syft
 
           # Verify syft installation
