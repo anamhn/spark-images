@@ -89,15 +89,22 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update && sudo apt-get install -y jq curl wget
-          
-          # Install syft
-          echo "Installing syft..."
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          
+
+          # Install specific version of syft
+          VERSION="v1.34.1"  # Set your desired version here
+          ARCH="amd64"      # Change if needed (e.g., arm64)
+          OS="linux"
+
+          curl -L -o /tmp/syft.tar.gz "https://github.com/anchore/syft/releases/download/${VERSION}/syft-${VERSION}-${OS}-${ARCH}.tar.gz"
+          tar -xzvf /tmp/syft.tar.gz -C /tmp
+          sudo mv /tmp/syft-${VERSION}-${OS}-${ARCH}/syft /usr/local/bin/
+          sudo chmod +x /usr/local/bin/syft
+
           # Verify syft installation
           if ! command -v syft &> /dev/null; then
             exit 1
           fi
+          syft version 
           
           # Install cosign with better error handling
           COSIGN_VERSION="v2.6.0"
