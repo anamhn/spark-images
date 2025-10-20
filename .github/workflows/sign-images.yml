@@ -124,7 +124,7 @@ jobs:
             echo "Downloaded file checksum:"
             sha256sum cosign-linux-amd64 || true
             rm -f cosign-linux-amd64 SHA256SUMS
-          
+          fi 
           # Install cosign
           chmod +x cosign-linux-amd64
           sudo mv cosign-linux-amd64 /usr/local/bin/cosign
