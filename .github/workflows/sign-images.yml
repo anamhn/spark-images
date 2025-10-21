@@ -99,6 +99,7 @@ jobs:
           tar -xzvf /tmp/syft.tar.gz -C /tmp
           sudo mv /tmp/syft /usr/local/bin/
           sudo chmod +x /usr/local/bin/syft
+          
 
           # Verify syft installation
           if ! command -v syft &> /dev/null; then
